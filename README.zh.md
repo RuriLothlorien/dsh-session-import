@@ -54,7 +54,7 @@
 让 profile 指向 release 产物——是打包好的 bundle，不是源码目录：
 
 ```bash
-dsh plugin install https://github.com/RuriLothlorien/dsh-session-import/releases/latest/download/dsh-session-import-1.0.1.tgz
+dsh plugin install https://github.com/RuriLothlorien/dsh-session-import/releases/latest/download/dsh-session-import.tgz
 ```
 
 也可以把同一个压缩包下载到本地后安装，离线交付按 `INSTALL.md` 操作。

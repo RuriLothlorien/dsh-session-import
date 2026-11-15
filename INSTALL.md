@@ -5,15 +5,15 @@ Two ways in: let DSH fetch a release asset, or install an archive you already ho
 ## Online
 
 ```bash
-dsh plugin install https://github.com/RuriLothlorien/dsh-session-import/releases/latest/download/dsh-session-import-1.0.1.tgz
+dsh plugin install https://github.com/RuriLothlorien/dsh-session-import/releases/latest/download/dsh-session-import.tgz
 ```
 
-The URL is a stable alias: `latest/download/<asset>` always resolves to the newest release, so an existing profile keeps working across upgrades without editing the path. Pin the version in the filename when you want a profile to stay on one build.
+The asset name carries no version, deliberately: `latest/download/` resolves `latest` at request time but takes the filename literally, so a versioned name would work until the next release and 404 after it. The version lives in the tag, and the release notes state it. To stay on one build, pin the tag instead of the alias — `.../releases/download/v1.0.1/dsh-session-import.tgz`.
 
 ## Offline
 
 ```bash
-dsh plugin install ./dsh-session-import-1.0.1.tgz
+dsh plugin install ./dsh-session-import.tgz
 ```
 
 Or unzip it somewhere permanent and point the profile at the directory instead — useful while iterating on the bundle.
@@ -33,10 +33,10 @@ DSH `>=0.2.0-rc.2 <0.3.0-0`, Node `^22.19.0 || >=24.0.0`.
 ## Verifying the release asset
 
 ```bash
-sha256sum dsh-session-import-1.0.1.tgz
+sha256sum dsh-session-import.tgz
 ```
 
-Compare against the digest in the release notes. The archive should contain exactly the files listed in `package.json`'s `files` array — thirteen entries, no build output.
+Compare against the digest in the release notes. The archive should contain exactly the files listed in `package.json`'s `files` array plus the manifest itself — fourteen entries, no build output.
 
 ## After installing
 

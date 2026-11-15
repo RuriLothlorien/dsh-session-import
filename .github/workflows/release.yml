@@ -33,7 +33,13 @@ jobs:
             exit 1
           fi
           echo "VERSION=${version}" >> "$GITHUB_ENV"
-          echo "TARBALL=dsh-session-import-${version}.tgz" >> "$GITHUB_ENV"
+          # One asset name, no version in it. `latest/download/` resolves
+          # `latest` at request time but takes the filename literally, so a
+          # versioned name works until the next release and 404s after it —
+          # a silent rot in every listing and profile that points here. The
+          # version stays in the tag and in `package.json`; the asset does not
+          # need to carry it.
+          echo "TARBALL=dsh-session-import.tgz" >> "$GITHUB_ENV"
 
       # `npm pack` honours the `files` array, so the archive carries the
       # published surface and nothing else — no workflows, no lockfiles.
@@ -41,6 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           npm pack --pack-destination .
+          mv "dsh-session-import-${VERSION}.tgz" "${TARBALL}"
           test -f "${TARBALL}"
 
       - name: Verify the archive
@@ -76,41 +83,25 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          # A version-free alias alongside the versioned asset. Consumers that
-          # want a fixed build pin the versioned name; listings and anything
-          # else that wants "the current release" use `latest/download/` with
-          # this one, which keeps resolving after the next release instead of
-          # 404ing the moment a versioned filename stops being the newest.
-          STABLE=dsh-session-import.tgz
-          cp "${TARBALL}" "${STABLE}"
-          sha256sum "${STABLE}" > "${STABLE}.sha256"
-
+          digest="$(cut -d' ' -f1 "${TARBALL}.sha256")"
           notes="$(cat <<EOF
-          Packed bundle, built by CI from this tag.
+          Packed bundle, built by CI from this tag. Version ${VERSION}.
 
-          sha256: \`$(cut -d' ' -f1 "${TARBALL}.sha256")\`
+          sha256: \`${digest}\`
 
-          Install a pinned build:
-
-          \`\`\`
-          dsh plugin install https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/${TARBALL}
-          \`\`\`
-
-          Or the current release, by the version-free alias:
+          Install:
 
           \`\`\`
-          dsh plugin install https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/${STABLE}
+          dsh plugin install https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/${TARBALL}
           \`\`\`
           EOF
           )"
           # A re-run on the same tag replaces the assets instead of failing on
           # the release that already exists.
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            gh release upload "${GITHUB_REF_NAME}" \
-              "${TARBALL}" "${TARBALL}.sha256" "${STABLE}" "${STABLE}.sha256" --clobber
+            gh release upload "${GITHUB_REF_NAME}" "${TARBALL}" "${TARBALL}.sha256" --clobber
           else
-            gh release create "${GITHUB_REF_NAME}" \
-              "${TARBALL}" "${TARBALL}.sha256" "${STABLE}" "${STABLE}.sha256" \
+            gh release create "${GITHUB_REF_NAME}" "${TARBALL}" "${TARBALL}.sha256" \
               --title "${GITHUB_REF_NAME}" \
               --notes "${notes}" \
               --verify-tag

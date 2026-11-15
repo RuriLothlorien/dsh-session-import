@@ -54,7 +54,7 @@ Conversation ids are namespaced per source (`session-claude-<id>`, `session-work
 Point the profile at a release asset — the packed bundle, not a checkout:
 
 ```bash
-dsh plugin install https://github.com/RuriLothlorien/dsh-session-import/releases/latest/download/dsh-session-import-1.0.1.tgz
+dsh plugin install https://github.com/RuriLothlorien/dsh-session-import/releases/latest/download/dsh-session-import.tgz
 ```
 
 Or install from a local copy of that same archive, which is what `INSTALL.md` covers for an offline hand-off.
