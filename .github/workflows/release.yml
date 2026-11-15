@@ -1,0 +1,100 @@
+name: Release
+
+# A tag is the only trigger: the packed asset has to match the version in
+# package.json, and a release that contradicts the source would be worse than
+# no release at all.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # The tag and the manifest are two places the same version is written;
+      # letting them drift produces an asset whose filename lies about its
+      # contents, which is exactly what anyone pinning a URL would trip over.
+      - name: Check the tag matches package.json
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match package.json version ${version}"
+            exit 1
+          fi
+          echo "VERSION=${version}" >> "$GITHUB_ENV"
+          echo "TARBALL=dsh-session-import-${version}.tgz" >> "$GITHUB_ENV"
+
+      # `npm pack` honours the `files` array, so the archive carries the
+      # published surface and nothing else — no workflows, no lockfiles.
+      - name: Pack
+        run: |
+          set -euo pipefail
+          npm pack --pack-destination .
+          test -f "${TARBALL}"
+
+      - name: Verify the archive
+        run: |
+          set -euo pipefail
+          tar -tzf "${TARBALL}" > entries.txt
+          # Every entry must sit under package/, or an extractor handed this
+          # archive could write outside the directory it was given.
+          if grep -qv '^package/' entries.txt; then
+            echo "::error::archive holds entries outside package/"
+            grep -v '^package/' entries.txt
+            exit 1
+          fi
+          for required in package/package.json package/lib/index.js package/lib/client.js \
+                           package/lib/build.js package/lib/sources.js \
+                           package/locale/en.json package/locale/zh.json \
+                           package/assets/icon.svg package/cordis.patch.yml; do
+            grep -qx "${required}" entries.txt || { echo "::error::archive is missing ${required}"; exit 1; }
+          done
+
+          mkdir -p extracted
+          tar -xzf "${TARBALL}" -C extracted
+          # A syntax error here would only surface on a user's machine, after
+          # the profile had already been pointed at the asset.
+          for file in extracted/package/lib/*.js; do
+            node --check "${file}"
+          done
+
+          sha256sum "${TARBALL}" | tee "${TARBALL}.sha256"
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          notes="$(cat <<EOF
+          Packed bundle, built by CI from this tag.
+
+          sha256: \`$(cut -d' ' -f1 "${TARBALL}.sha256")\`
+
+          Install:
+
+          \`\`\`
+          dsh plugin install https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/${TARBALL}
+          \`\`\`
+          EOF
+          )"
+          # A re-run on the same tag replaces the assets instead of failing on
+          # the release that already exists.
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" "${TARBALL}" "${TARBALL}.sha256" --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" "${TARBALL}" "${TARBALL}.sha256" \
+              --title "${GITHUB_REF_NAME}" \
+              --notes "${notes}" \
+              --verify-tag
+          fi

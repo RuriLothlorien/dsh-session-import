@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Session import",
+    "description": "Import conversations from Codex, Claude Code / Claude Desktop and WorkBuddy as new DSH sessions: open the \"Session import\" panel in the sidebar, pick the sources, time range and detail level, then press Import. The four detail levels are summary / talk / tools / full; the last is closest to the original record and the largest. The plugin only reads those clients' own transcript directories — it never writes to or changes them, and it makes no model requests. Each conversation is imported once and a repeat import is skipped (tick the copy option in the panel to write another). Imported sessions join the Workspace of their original directory, and a new one is created when none matches; if publishing is turned off in the config, restart DSH to see them in the sidebar. Every panel request is only accepted from this machine's own DSH page."
+  }
+}

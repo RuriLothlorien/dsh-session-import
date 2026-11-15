@@ -1,0 +1,16 @@
+# Official bundle layer for the session import panel.
+# `plugin_manager install_bundle` links the package into the profile and boots these rows.
+# These values are the defaults of the row's Config schema (lib/index.js), which the
+# settings form reads and writes back: each `*Home` falls back to its environment
+# variable and then to the documented directory, and the remaining fields carry the
+# defaults the panel relies on.
+- insert:
+    - id: session-import
+      name: dsh-session-import
+      config:
+        codexHome: ''
+        claudeHome: ''
+        workbuddyHome: ''
+        toolOutputLimit: 4000
+        createWorkspace: true
+        publishSessions: true
