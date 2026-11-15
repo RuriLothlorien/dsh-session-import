@@ -76,24 +76,41 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # A version-free alias alongside the versioned asset. Consumers that
+          # want a fixed build pin the versioned name; listings and anything
+          # else that wants "the current release" use `latest/download/` with
+          # this one, which keeps resolving after the next release instead of
+          # 404ing the moment a versioned filename stops being the newest.
+          STABLE=dsh-session-import.tgz
+          cp "${TARBALL}" "${STABLE}"
+          sha256sum "${STABLE}" > "${STABLE}.sha256"
+
           notes="$(cat <<EOF
           Packed bundle, built by CI from this tag.
 
           sha256: \`$(cut -d' ' -f1 "${TARBALL}.sha256")\`
 
-          Install:
+          Install a pinned build:
 
           \`\`\`
-          dsh plugin install https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/${TARBALL}
+          dsh plugin install https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/${TARBALL}
+          \`\`\`
+
+          Or the current release, by the version-free alias:
+
+          \`\`\`
+          dsh plugin install https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/${STABLE}
           \`\`\`
           EOF
           )"
           # A re-run on the same tag replaces the assets instead of failing on
           # the release that already exists.
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            gh release upload "${GITHUB_REF_NAME}" "${TARBALL}" "${TARBALL}.sha256" --clobber
+            gh release upload "${GITHUB_REF_NAME}" \
+              "${TARBALL}" "${TARBALL}.sha256" "${STABLE}" "${STABLE}.sha256" --clobber
           else
-            gh release create "${GITHUB_REF_NAME}" "${TARBALL}" "${TARBALL}.sha256" \
+            gh release create "${GITHUB_REF_NAME}" \
+              "${TARBALL}" "${TARBALL}.sha256" "${STABLE}" "${STABLE}.sha256" \
               --title "${GITHUB_REF_NAME}" \
               --notes "${notes}" \
               --verify-tag
