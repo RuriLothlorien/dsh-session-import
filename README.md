@@ -19,7 +19,9 @@ Each directory is read only. Nothing is rewritten, moved, or deleted.
 
 Files that cannot be parsed are counted and reported rather than treated as failures — that covers the encrypted rollouts a data-loss-prevention agent writes, in-flight files, and empty placeholders.
 
-One conversation can own several files: Codex writes a continuation log on every resume carrying the same thread id, and a WorkBuddy resend fork does the same. Those files are folded into one row — the largest one, which replays the earlier transcript in full — and the row marks how many were folded (`×2`, `×3`). Nothing is stitched together, so the conversation is neither lost nor duplicated.
+One conversation can own several files: Codex writes a continuation log on every resume carrying the same thread id. Those files are folded into one row and the row marks how many were folded (`×2`, `×3`).
+
+Codex continuation logs are **slices, not copies**: each one starts where the previous one stopped, so the newest turns live in the newest file and no file holds the whole conversation. They are therefore stitched together in write order, with records de-duplicated by item id across slices and the per-slice preamble (`AGENTS.md`, `<environment_context>`, the skills list) kept from the first slice only. A WorkBuddy resend fork is a full replay instead, so there the largest file alone is the conversation.
 
 ## Granularity
 
@@ -32,7 +34,7 @@ Every level contains everything the level above it does.
 | L3 工具 / tools | plus tool calls and their outputs, truncated to `toolOutputLimit` |
 | L4 完整 / full | plus reasoning, and tool outputs in full |
 
-The message cap keeps the most recent *n* messages of a conversation and aligns the result to a user turn, so a trimmed import still opens on something the user said.
+The message cap keeps the most recent *n* messages of a conversation and aligns the result to a user turn, so a trimmed import still opens on something the user said. It defaults to **All**: a long conversation cut to its last hundred messages looks exactly like a failed import, so the cap is opt-in rather than opt-out.
 
 The opening instructions a client replays at the start of a transcript are scaffolding, not conversation: at L2 and above they are kept only after the first real user turn.
 
