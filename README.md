@@ -38,6 +38,8 @@ The message cap keeps the most recent *n* messages of a conversation and aligns 
 
 The opening instructions a client replays at the start of a transcript are scaffolding, not conversation: at L2 and above they are kept only after the first real user turn.
 
+One model response becomes one step: its reasoning, prose and the tool calls it issued share a single assistant message, with the tool results right behind them instead of pooled at the end of the turn. Codex records carry no response id, so the plugin splits responses on a new reasoning or prose record following a tool output, and on a further tool call inside an assistant message already spoken; Claude Code and WorkBuddy name the response directly and keep their own boundaries.
+
 ## What an import produces
 
 Each selected conversation becomes a real DSH session:
